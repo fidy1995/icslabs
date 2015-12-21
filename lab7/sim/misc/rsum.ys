@@ -1,0 +1,48 @@
+#5130379033 Jiang Jiheng
+
+	.pos   0
+init:	irmovl Stack, %esp
+	irmovl Stack, %ebp
+	call   Main
+	halt
+
+	.align 4
+list:
+	ele1:
+		.long 0x00a
+		.long ele2
+	ele2:
+		.long 0x0b0
+		.long ele3
+	ele3:
+		.long 0xc00
+		.long 0
+
+Main:   pushl  %ebp
+	rrmovl %esp, %ebp
+	irmovl list, %ecx
+	xorl   %ebx, %ebx
+	call   Rsum	
+	rrmovl %ebp, %esp
+	popl   %ebp
+	ret
+
+Rsum:   pushl  %ebp
+	rrmovl %esp, %ebp
+	irmovl $0x4, %edx
+	xorl   %eax, %eax
+	mrmovl (%ecx), %ebx
+	pushl  %ebx	
+	addl   %edx, %ecx
+	mrmovl (%ecx), %ecx
+	andl   %ecx, %ecx
+	je     Loop
+	call   Rsum
+Loop:	popl   %ebx
+	addl   %ebx, %eax
+	rrmovl %ebp, %esp
+	popl   %ebp
+	ret
+
+	.pos   0x100
+Stack:

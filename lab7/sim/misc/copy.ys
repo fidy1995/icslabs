@@ -1,0 +1,60 @@
+#5130379033 Jiang Jiheng
+
+	.pos 0
+Init:	irmovl Stack, %esp
+	irmovl Stack, %ebp
+	call   Main
+	halt
+
+	.align 4
+src:
+	.long 0x00a
+	.long 0x0b0
+	.long 0xc00
+dest:
+	.long 0x111
+	.long 0x222
+	.long 0x333
+
+Main:	pushl  %ebp
+	rrmovl %esp, %ebp
+	irmovl src, %edx
+	pushl  %edx
+	irmovl dest, %esi
+	pushl  %esi
+	irmovl $0x3, %edi
+	pushl  %edi
+	call   Copy
+	popl   %edi
+	popl   %esi
+	popl   %edx
+	rrmovl %ebp, %esp
+	popl   %ebp
+	ret
+
+Copy:	pushl  %ebp
+	rrmovl %esp, %ebp
+	mrmovl 0x8(%esp), %edx
+	mrmovl 0xc(%esp), %ebx
+	mrmovl 0x10(%esp), %ecx
+	andl   %edx, %edx
+	je    Zero
+	xorl   %eax, %eax
+Loop:	mrmovl (%ecx), %esi
+	irmovl $0x4, %edi
+	addl   %edi, %ecx
+	rmmovl %esi, (%ebx)
+	addl   %edi, %ebx
+	xorl   %esi, %eax
+	irmovl $0x1, %edi
+	subl   %edi, %edx
+	andl   %edx, %edx
+	jne    Loop
+	jmp    Outo
+Zero:	xorl   %eax, %eax
+Outo:	rrmovl %ebp, %esp
+	popl   %ebp
+	ret
+
+	.pos 0x100
+Stack:

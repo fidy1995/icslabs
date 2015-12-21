@@ -1,0 +1,165 @@
+#/* $begin ncopy-ys */
+##################################################################
+# ncopy.ys - Copy a src block of len ints to dst.
+# Return the number of positive ints (>0) contained in src.
+#
+# Include your name and ID here.
+# Name Jiang Jiheng   ID 5130379033
+# Describe how and why you modified the baseline code.
+# Unrolling - 8 times per loop
+# Jumptable - deal with rest 0 to 7
+# Using iaddl - instead of irmov & add
+# Using leave - instead of rrmov & pop
+# Using data - no predictions, use positive as 0 and negative as -1
+##################################################################
+# Do not modify this portion
+# Function prologue.
+ncopy:	pushl %ebp		# Save old frame pointer
+	rrmovl %esp,%ebp	# Set up new frame pointer
+	pushl %esi		# Save callee-save regs
+	pushl %ebx
+	pushl %edi
+	mrmovl 8(%ebp),%ebx	# src
+	mrmovl 16(%ebp),%edx	# len
+	mrmovl 12(%ebp),%ecx	# dst
+
+##################################################################
+# You can modify this portion
+	# Loop header
+	rrmovl %edx, %eax		# let count = len
+	iaddl  $-7, %edx		# len < 8?
+	jle    Out			# if so goto Out
+
+#unrolling 8 times
+Loop1:	iaddl  $-1, %edx		# len -= 8 (in all)
+	mrmovl 28(%ebx), %edi		# read the real val1
+	mrmovl 30(%ebx), %esi		# read val1
+	rmmovl %edi, 28(%ecx)		# store the real val1
+	mrmovl 26(%ebx), %edi		# read val2
+# this add is to add 
+# the high 16 bits of data
+# so it will only be -1 or 0
+	addl   %esi, %eax		# count-- or count - 0
+
+Loop2:	mrmovl 22(%ebx), %esi		# read val3
+	rmmovl %edi, 26(%ecx)		# store val2
+	addl   %edi, %eax		
+
+Loop3:	mrmovl 18(%ebx), %edi		# read val4
+	rmmovl %esi, 22(%ecx)		# store val3
+	addl   %esi, %eax		
+
+Loop4:  mrmovl 14(%ebx), %esi 	        # read val5
+        rmmovl %edi, 18(%ecx)           # store val4
+        addl   %edi, %eax		
+
+Loop5:  mrmovl 10(%ebx), %edi           # read val6
+        rmmovl %esi, 14(%ecx)           # store val5
+        addl   %esi, %eax               
+        
+Loop6:  mrmovl 6(%ebx), %esi            # read val7
+        rmmovl %edi, 10(%ecx)           # store val6
+        addl   %edi, %eax               
+
+Loop7:  mrmovl 2(%ebx), %edi            # read val8
+        rmmovl %esi, 6(%ecx)            # store val7
+        addl   %esi, %eax               
+        
+Loop8:  mrmovl (%ebx), %esi		# read the real val8
+	rmmovl %edi, 2(%ecx)		# store val8
+        rmmovl %esi, (%ecx)           	# store the real val8
+        addl   %edi, %eax               
+
+Rest:	andl   %edx, %edx		# len == 0?
+	je     Exit			# exit when len == 0
+	iaddl  $32, %ebx		# src++
+	iaddl  $32, %ecx		# dst++
+	iaddl  $-7, %edx		# len > 7?
+	jg     Loop1
+
+Out:    addl   %edx, %edx
+	addl   %edx, %edx		# len *= 4, 0 >= len >= -7
+	mrmovl JumpTable(%edx), %edx	
+	pushl  %edx			
+	ret				# jump by ret
+
+Jump7:  xorl   %edx, %edx		# This part is the same
+	mrmovl 24(%ebx), %esi		# as loop2....7
+	mrmovl 26(%ebx), %edi
+	rmmovl %esi, 24(%ecx)
+	mrmovl 22(%ebx), %esi
+	addl   %edi, %eax
+	jmp    Loop3
+Jump6:  xorl   %edx, %edx
+	mrmovl 20(%ebx), %edi
+	mrmovl 22(%ebx), %esi
+	rmmovl %edi, 20(%ecx)
+	mrmovl 18(%ebx), %edi
+	addl   %esi, %eax
+	jmp    Loop4
+Jump5:  xorl   %edx, %edx
+        mrmovl 16(%ebx), %esi
+        mrmovl 18(%ebx), %edi
+        rmmovl %esi, 16(%ecx)
+        mrmovl 14(%ebx), %esi
+        addl   %edi, %eax
+        jmp    Loop5
+Jump4:  xorl   %edx, %edx
+        mrmovl 12(%ebx), %edi
+        mrmovl 14(%ebx), %esi
+        rmmovl %edi, 12(%ecx)
+        mrmovl 10(%ebx), %edi
+        addl   %esi, %eax
+        jmp    Loop6
+Jump3:  xorl   %edx, %edx
+        mrmovl 8(%ebx), %esi
+        mrmovl 10(%ebx), %edi
+        rmmovl %esi, 8(%ecx)
+        mrmovl 6(%ebx), %esi
+        addl   %edi, %eax
+        jmp    Loop7
+Jump2:  mrmovl 4(%ebx), %edi
+        mrmovl 6(%ebx), %esi
+        rmmovl %edi, 4(%ecx)
+        mrmovl 2(%ebx), %edi
+        addl   %esi, %eax
+	xorl   %edx, %edx
+        jmp    Loop8
+Jump1:  mrmovl (%ebx), %esi		# Found no good method
+	andl   %esi, %esi		# so use the slowest 5-cycled
+	rmmovl %esi, (%ecx)
+	jg     Exit
+	iaddl  $-1, %eax
+
+Exit:   popl   %edi			# restore callee-saved regs
+	popl   %ebx
+	popl   %esi
+	irmovl $0xffff, %ecx		# mask to count
+	andl   %ecx, %eax
+	leave
+	ret
+	
+	.long  Exit
+	.long  Jump1
+	.long  Jump2
+	.long  Jump3
+	.long  Jump4
+	.long  Jump5
+	.long  Jump6
+JumpTable:	.long  Jump7
+
+
+##################################################################
+# Do not modify the following section of code
+# Function epilogue.
+Done:
+	popl %edi               # Restore callee-save registers
+	popl %ebx
+	popl %esi
+	rrmovl %ebp, %esp
+	popl %ebp
+	ret
+##################################################################
+# Keep the following label at the end of your function
+End:
+#/* $end ncopy-ys */
